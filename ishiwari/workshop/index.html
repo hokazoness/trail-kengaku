@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#111512">
+<title>登山道整備の記録</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<!--
+  見学版（→ ADR 0052 検討中）。scripts/build_kengaku.py が data.js と一緒に書き出す。
+  ここを手で直さない。直すのは scripts/kengaku_template/index.html。
+  見え方は QField の定点カメラの［見る］（ADR 0033）にそろえる。
+-->
+<style>
+  :root {
+    --bg: #111512; --panel: #1b211d; --line: #2c342f; --ink: #f2f4f1; --sub: #aab4ad;
+    --before: #e0a43a; --after: #4fb477; --watch: #5aa0e6; --other: #9aa39d;
+    --btn: #26302a; --btn-on: #3d6b4e; --warn: #d0573f;
+    --safe-b: env(safe-area-inset-bottom, 0px); --safe-t: env(safe-area-inset-top, 0px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: -apple-system, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", sans-serif;
+    -webkit-text-size-adjust: 100%; }
+  body { overscroll-behavior: none; touch-action: manipulation; }
+  button { font: inherit; color: inherit; border: 0; background: var(--btn); border-radius: 10px;
+    padding: 10px 14px; min-height: 44px; cursor: pointer; }
+  button:active { filter: brightness(1.3); }
+  button:disabled { opacity: .35; }
+  .trial { background: var(--warn); color: #fff; text-align: center; font-size: 13px; padding: 4px 8px;
+    padding-top: calc(4px + var(--safe-t)); }
+
+  /* ---- 一覧 ---- */
+  #list { height: 100%; overflow-y: auto; padding: 0 16px calc(24px + var(--safe-b)); }
+  #list header { padding: calc(20px + var(--safe-t)) 0 8px; }
+  #list h1 { font-size: 22px; margin: 0 0 4px; line-height: 1.35; }
+  #list .lead { color: var(--sub); font-size: 14px; margin: 0; line-height: 1.6; }
+  .offline { margin: 14px 0 6px; padding: 12px 14px; border-radius: 12px; background: var(--panel);
+    font-size: 15px; line-height: 1.5; border: 1px solid var(--line); }
+  .offline.ok { border-color: var(--after); }
+  .offline.ng { border-color: var(--warn); }
+  .offline .bar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 8px; overflow: hidden; }
+  .offline .bar i { display: block; height: 100%; width: 0; background: var(--watch); transition: width .2s; }
+  .card { display: flex; gap: 12px; align-items: stretch; width: 100%; text-align: left; margin-top: 12px;
+    padding: 0; overflow: hidden; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; }
+  .card img { width: 38%; max-width: 180px; aspect-ratio: 4/3; object-fit: cover; flex: none; background: #000; }
+  .card .t { padding: 10px 10px 10px 0; display: flex; flex-direction: column; gap: 4px; justify-content: center; }
+  .card .n { font-size: 13px; color: var(--sub); }
+  .card .h { font-size: 18px; font-weight: 700; line-height: 1.3; }
+  .card .d { font-size: 13px; color: var(--sub); line-height: 1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 18px 0 4px; font-size: 13px; color: var(--sub); }
+  .legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%;
+    margin-right: 5px; background: var(--c); vertical-align: -1px; }
+  .foot { color: var(--sub); font-size: 12px; margin-top: 22px; line-height: 1.6; }
+
+  /* ---- 見る ---- */
+  #view { position: fixed; inset: 0; display: none; flex-direction: column; background: #000; }
+  #view.on { display: flex; }
+  .top { display: flex; align-items: center; gap: 8px; padding: calc(6px + var(--safe-t)) 8px 6px;
+    background: var(--bg); flex: none; }
+  .top .ttl { flex: 1; min-width: 0; font-size: 15px; line-height: 1.3; }
+  .top .ttl b { display: block; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top .ttl small { color: var(--sub); }
+  .stage { flex: 1; min-height: 0; display: flex; gap: 2px; background: #000; }
+  .stage.pair { flex-direction: column; }
+  @media (orientation: landscape) { .stage.pair { flex-direction: row; } }
+  .viewer { position: relative; flex: 1; min-width: 0; min-height: 0; overflow: hidden; touch-action: none;
+    user-select: none; -webkit-user-select: none; }
+  .track { position: absolute; inset: 0; display: flex; will-change: transform; }
+  .slide { position: relative; flex: none; width: 100%; height: 100%; overflow: hidden; }
+  .slide img { position: absolute; left: 50%; top: 50%; max-width: 100%; max-height: 100%;
+    transform-origin: 0 0; -webkit-user-drag: none; pointer-events: none; }
+  .badge { position: absolute; left: 8px; top: 8px; padding: 6px 10px 6px 8px; border-radius: 10px;
+    background: rgba(0,0,0,.62); font-size: 15px; line-height: 1.3; pointer-events: none;
+    backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); }
+  .badge b { display: inline-block; padding: 1px 8px; border-radius: 6px; margin-right: 6px; color: #111;
+    background: var(--c); font-size: 15px; }
+  .badge small { display: block; color: #dfe5e0; font-size: 13px; margin-top: 2px; }
+  .count { position: absolute; right: 8px; top: 8px; padding: 4px 9px; border-radius: 9px;
+    background: rgba(0,0,0,.55); font-size: 13px; color: #dfe5e0; pointer-events: none; }
+  .hint { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%); padding: 6px 12px;
+    border-radius: 16px; background: rgba(0,0,0,.6); font-size: 13px; color: #e8ece9; pointer-events: none;
+    transition: opacity .6s; white-space: nowrap; }
+  .strip { flex: none; display: flex; gap: 6px; overflow-x: auto; padding: 8px 8px 4px; background: var(--bg);
+    scrollbar-width: none; }
+  .strip::-webkit-scrollbar { display: none; }
+  .strip button { flex: none; min-height: 40px; padding: 5px 10px; font-size: 13px; line-height: 1.25;
+    border: 2px solid transparent; text-align: center; }
+  .strip button i { display: block; height: 4px; border-radius: 2px; background: var(--c); margin-bottom: 4px; }
+  .strip button.on { border-color: var(--ink); background: #33403a; }
+  .tools { flex: none; display: flex; gap: 8px; padding: 6px 8px; background: var(--bg); }
+  .tools .mid { flex: 1; }
+  .tools button.on { background: var(--btn-on); }
+  .text { flex: none; max-height: 28vh; overflow-y: auto; background: var(--panel); padding: 10px 14px
+    calc(12px + var(--safe-b)); font-size: 15px; line-height: 1.7; border-top: 1px solid var(--line); }
+  .text .meta { color: var(--sub); font-size: 13px; }
+  .text p { margin: 4px 0 0; white-space: pre-wrap; }
+  .text.hide { display: none; }
+  .nosafe { padding-bottom: calc(6px + var(--safe-b)); }
+  @media (orientation: landscape) and (max-height: 500px) {
+    .text { display: none; }
+    .top { padding-top: 4px; padding-bottom: 4px; }
+    .strip { padding-top: 4px; }
+  }
+</style>
+</head>
+<body>
+<div id="list"></div>
+<div id="view">
+  <div class="top">
+    <button id="back">一覧</button>
+    <div class="ttl" id="ttl"></div>
+    <button id="info">解説</button>
+  </div>
+  <div class="stage" id="stage"></div>
+  <div class="strip" id="strip"></div>
+  <div class="tools" id="tools">
+    <button id="prev">‹ 前</button>
+    <button id="pair" class="mid">2枚並べる</button>
+    <button id="next">次 ›</button>
+  </div>
+  <div class="text" id="text"></div>
+</div>
+<script src="data.js"></script>
+<script>
+(() => {
+  const D = window.KENGAKU;
+  const $ = (id) => document.getElementById(id);
+  const COLOR = { before: "var(--before)", after: "var(--after)", watch: "var(--watch)", other: "var(--other)" };
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  };
+  document.title = D.title;
+
+  // ================================================================ 一覧
+  function renderList() {
+    const n = D.sites.length;
+    const all = D.sites.reduce((a, s) => a + s.photos.length, 0);
+    let h = D.trial ? `<div class="trial">試作・配らない（団体の中だけで見る写真が入っています）</div>` : "";
+    h += `<header><h1>${esc(D.title)}</h1>
+      <p class="lead">${n}か所の、手を入れる前・入れた直後・その後の様子を、同じ場所・同じ向きで撮った写真で見られます。</p></header>
+      <div class="offline" id="off">準備しています…</div>
+      <div class="legend">
+        <span style="--c:var(--before)">施工前</span><span style="--c:var(--after)">施工後</span>
+        <span style="--c:var(--watch)">経過観察（その後の様子）</span></div>`;
+    D.sites.forEach((s, i) => {
+      const last = s.photos[s.photos.length - 1];
+      h += `<button class="card" data-i="${i}">
+        <img src="${esc(last.file)}" alt="" loading="lazy">
+        <span class="t"><span class="n">${s.no} / ${n}</span>
+          <span class="h">${esc(s.title)}</span>
+          <span class="d">${s.installed ? esc(s.installed) + " 施工<br>" : ""}写真 ${s.photos.length}枚（${esc(s.photos[0].date.slice(0, 5))}〜${esc(last.date.slice(0, 5))}）</span></span>
+      </button>`;
+    });
+    h += `<p class="foot">写真は横にめくると、撮った日の順に変わります。［2枚並べる］で施工前と今を並べられます。<br>
+      ${esc(D.set)}・${esc(D.built)} 作成</p>`;
+    $("list").innerHTML = h;
+    $("list").querySelectorAll(".card").forEach((b) => b.onclick = () => openSite(+b.dataset.i));
+  }
+
+  // ================================================================ 写真を見る道具（1面ぶん）
+  // 横にめくる・2本指で拡大・2回たたいて拡大・拡大中は指で動かす。QField の［見る］と同じ操作
+  class Viewer {
+    constructor(host, photos, start, onChange) {
+      this.photos = photos; this.i = start; this.onChange = onChange;
+      this.el = document.createElement("div"); this.el.className = "viewer";
+      this.track = document.createElement("div"); this.track.className = "track";
+      this.el.appendChild(this.track);
+      this.slides = photos.map((p, k) => {
+        const s = document.createElement("div"); s.className = "slide";
+        s.innerHTML = `<img alt="" draggable="false" ${Math.abs(k - start) <= 1 ? `src="${esc(p.file)}"` : `data-src="${esc(p.file)}"`}>
+          <div class="badge" style="--c:${COLOR[p.kind]}"><b>${esc(p.label)}</b>${esc(p.date)}${p.note ? `<small>${esc(p.note)}</small>` : ""}</div>
+          <div class="count">${k + 1} / ${photos.length}</div>`;
+        this.track.appendChild(s);
+        return s;
+      });
+      host.appendChild(this.el);
+      this.z = { s: 1, x: 0, y: 0 };
+      this.ptrs = new Map();
+      this.bind();
+      this.go(start, false);
+      this.ro = new ResizeObserver(() => { this.layout(); });
+      this.ro.observe(this.el);
+    }
+    destroy() { this.ro.disconnect(); this.el.remove(); }
+    get W() { return this.el.clientWidth; }
+    get H() { return this.el.clientHeight; }
+    img(k = this.i) { return this.slides[k].querySelector("img"); }
+    fit(k = this.i) {           // 画面に収めたときの写真の大きさ
+      const p = this.photos[k], r = Math.min(this.W / p.w, this.H / p.h);
+      return { w: p.w * r, h: p.h * r };
+    }
+    load(k) {
+      if (k < 0 || k >= this.slides.length) return;
+      const im = this.img(k);
+      if (im.dataset.src) { im.src = im.dataset.src; delete im.dataset.src; }
+    }
+    layout() {
+      this.slides.forEach((s, k) => {
+        const im = this.img(k), f = this.fit(k);
+        im.style.width = f.w + "px"; im.style.height = f.h + "px";
+        im.style.maxWidth = "none"; im.style.maxHeight = "none";
+        if (k !== this.i) im.style.transform = `translate(${-f.w / 2}px, ${-f.h / 2}px)`;
+      });
+      this.applyZoom(); this.slideTo(0, false);
+    }
+    go(k, anim = true) {
+      k = Math.max(0, Math.min(this.photos.length - 1, k));
+      if (k !== this.i) { this.resetZoom(); }
+      this.i = k; this.load(k - 1); this.load(k); this.load(k + 1);
+      this.layout();
+      this.slideTo(0, anim);
+      this.onChange && this.onChange(k);
+    }
+    slideTo(dx, anim) {
+      this.track.style.transition = anim ? "transform .28s cubic-bezier(.2,.7,.3,1)" : "none";
+      this.track.style.transform = `translate3d(${-this.i * this.W + dx}px,0,0)`;
+    }
+    resetZoom() { this.z = { s: 1, x: 0, y: 0 }; this.applyZoom(); }
+    clamp() {
+      const f = this.fit(), z = this.z;
+      const mx = Math.max(0, (f.w * z.s - this.W) / 2), my = Math.max(0, (f.h * z.s - this.H) / 2);
+      z.x = Math.max(-mx, Math.min(mx, z.x)); z.y = Math.max(-my, Math.min(my, z.y));
+    }
+    applyZoom(anim = false) {
+      const f = this.fit(), z = this.z, im = this.img();
+      im.style.transition = anim ? "transform .22s ease-out" : "none";
+      im.style.transform = `translate(${z.x - f.w * z.s / 2}px, ${z.y - f.h * z.s / 2}px) scale(${z.s})`;
+    }
+    zoomAt(cx, cy, s) {          // 画面の (cx,cy) を中心に倍率 s へ
+      const z = this.z, ns = Math.max(1, Math.min(5, s));
+      const ox = cx - this.W / 2, oy = cy - this.H / 2;
+      z.x = ox - (ox - z.x) * ns / z.s; z.y = oy - (oy - z.y) * ns / z.s; z.s = ns;
+      if (ns === 1) { z.x = 0; z.y = 0; }
+      this.clamp();
+    }
+    bind() {
+      const el = this.el;
+      let start = null, pinch = null, lastTap = 0, moved = false;
+      const pos = (e) => { const r = el.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+      el.addEventListener("pointerdown", (e) => {
+        el.setPointerCapture(e.pointerId);
+        this.ptrs.set(e.pointerId, pos(e));
+        moved = false;
+        if (this.ptrs.size === 1) {
+          const p = pos(e);
+          start = { x: p.x, y: p.y, t: performance.now(), zx: this.z.x, zy: this.z.y };
+        } else if (this.ptrs.size === 2) {
+          const [a, b] = [...this.ptrs.values()];
+          pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), s: this.z.s, cx: (a.x + b.x) / 2, cy: (a.y + b.y) / 2,
+            zx: this.z.x, zy: this.z.y };
+          this.slideTo(0, true); start = null;
+        }
+      });
+      el.addEventListener("pointermove", (e) => {
+        if (!this.ptrs.has(e.pointerId)) return;
+        this.ptrs.set(e.pointerId, pos(e));
+        if (pinch && this.ptrs.size >= 2) {
+          const [a, b] = [...this.ptrs.values()];
+          const d = Math.hypot(a.x - b.x, a.y - b.y);
+          const cx = (a.x + b.x) / 2, cy = (a.y + b.y) / 2;
+          this.z.x = pinch.zx; this.z.y = pinch.zy; this.z.s = pinch.s;
+          this.zoomAt(pinch.cx, pinch.cy, pinch.s * d / pinch.d);
+          this.z.x += cx - pinch.cx; this.z.y += cy - pinch.cy; this.clamp();
+          this.applyZoom(); moved = true; return;
+        }
+        if (!start) return;
+        const p = pos(e), dx = p.x - start.x, dy = p.y - start.y;
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) moved = true;
+        if (this.z.s > 1.01) {                 // 拡大中は写真を動かす
+          this.z.x = start.zx + dx; this.z.y = start.zy + dy; this.clamp(); this.applyZoom();
+        } else {                               // 横にめくる
+          const edge = (this.i === 0 && dx > 0) || (this.i === this.photos.length - 1 && dx < 0);
+          this.slideTo(edge ? dx * 0.3 : dx, false);
+        }
+      });
+      const up = (e) => {
+        if (!this.ptrs.has(e.pointerId)) return;
+        this.ptrs.delete(e.pointerId);
+        if (pinch) {
+          if (this.ptrs.size < 2) { pinch = null; start = null;
+            if (this.z.s < 1.05) { this.resetZoom(); this.applyZoom(true); } }
+          return;
+        }
+        if (!start) return;
+        const p = pos(e), dx = p.x - start.x, dt = performance.now() - start.t;
+        if (!moved) {                          // たたいた
+          const now = performance.now();
+          if (now - lastTap < 320) {           // 2回たたいた → 拡大／戻す
+            if (this.z.s > 1.01) this.resetZoom(); else this.zoomAt(p.x, p.y, 2.5);
+            this.applyZoom(true); lastTap = 0;
+          } else lastTap = now;
+          this.slideTo(0, true);
+        } else if (this.z.s <= 1.01) {
+          const fast = Math.abs(dx) / dt > 0.45 && Math.abs(dx) > 30;
+          if ((dx < -this.W * 0.18 || (fast && dx < 0)) && this.i < this.photos.length - 1) this.go(this.i + 1);
+          else if ((dx > this.W * 0.18 || (fast && dx > 0)) && this.i > 0) this.go(this.i - 1);
+          else this.slideTo(0, true);
+        }
+        start = null;
+      };
+      el.addEventListener("pointerup", up);
+      el.addEventListener("pointercancel", up);
+      el.addEventListener("wheel", (e) => {   // パソコンで確かめるとき用
+        e.preventDefault(); const p = pos(e);
+        this.zoomAt(p.x, p.y, this.z.s * (e.deltaY < 0 ? 1.15 : 1 / 1.15)); this.applyZoom();
+      }, { passive: false });
+    }
+  }
+
+  // ================================================================ 見る画面
+  let cur = 0, pair = false, viewers = [], showText = store.get("kengaku.text") !== "0";
+
+  function openSite(i) {
+    cur = i;
+    $("list").style.display = "none";
+    $("view").classList.add("on");
+    history.pushState({ v: 1 }, "");
+    renderSite();
+  }
+  function closeSite() {
+    viewers.forEach((v) => v.destroy()); viewers = [];
+    $("view").classList.remove("on");
+    $("list").style.display = "";
+  }
+
+  function renderSite() {
+    const s = D.sites[cur], ph = s.photos;
+    viewers.forEach((v) => v.destroy()); viewers = [];
+    $("ttl").innerHTML = `<b>${esc(s.title)}</b><small>${s.no} / ${D.sites.length}　${esc(s.view)}</small>`;
+    const stage = $("stage");
+    stage.classList.toggle("pair", pair);
+    if (pair) {
+      // 最初は 左（上）＝施工前、右（下）＝その施工の直後。見学者は現場にいるので、
+      // 目の前の風景が「手を入れる前はどうで、入れた直後はどうだったか」を先に見せる（本人 9/29）。
+      // 施工後が無い定点は 一番古い／一番新しい。どちらも横にめくれる
+      const b = ph.findIndex((p) => p.kind === "before");
+      const a = ph.findIndex((p, k) => p.kind === "after" && k > b);
+      const [l, r] = b >= 0 && a >= 0 ? [b, a] : [0, ph.length - 1];
+      viewers.push(new Viewer(stage, ph, l, null));
+      viewers.push(new Viewer(stage, ph, r, null));
+    } else {
+      viewers.push(new Viewer(stage, ph, ph.length - 1, markStrip));   // 開くと一番新しい写真（QField と同じ）
+    }
+    $("strip").style.display = pair ? "none" : "";
+    $("strip").innerHTML = pair ? "" : ph.map((p, k) =>
+      `<button data-k="${k}" style="--c:${COLOR[p.kind]}"><i></i>${esc(p.date).replace(/^(\d+)年/, "$1年<br>")}</button>`).join("");
+    $("strip").querySelectorAll("button").forEach((b) => b.onclick = () => viewers[0].go(+b.dataset.k));
+    markStrip(viewers[0].i);
+    $("pair").textContent = pair ? "1枚にする" : "2枚並べる";
+    $("pair").classList.toggle("on", pair);
+    $("prev").disabled = cur === 0;
+    $("next").disabled = cur === D.sites.length - 1;
+    const t = $("text");
+    t.innerHTML = `<div class="meta">${esc(s.type)}${s.installed ? "・" + esc(s.installed) + " 施工" : ""}・${esc(s.view)}</div>`
+      + (s.text ? `<p>${esc(s.text)}</p>` : "");
+    t.classList.toggle("hide", !showText);
+    $("info").classList.toggle("on", showText);
+    $("tools").classList.toggle("nosafe", !showText);
+    if (!store.get("kengaku.hint")) {
+      const h = document.createElement("div"); h.className = "hint";
+      h.textContent = "← 横にめくると撮った日が変わります →";
+      viewers[0].el.appendChild(h);
+      setTimeout(() => { h.style.opacity = 0; }, 2600); setTimeout(() => h.remove(), 3400);
+      store.set("kengaku.hint", "1");
+    }
+  }
+  function markStrip(k) {
+    $("strip").querySelectorAll("button").forEach((b) => {
+      const on = +b.dataset.k === k; b.classList.toggle("on", on);
+      if (on) b.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
+    });
+  }
+
+  $("back").onclick = () => history.back();
+  window.addEventListener("popstate", closeSite);
+  $("prev").onclick = () => { if (cur > 0) { cur--; renderSite(); } };
+  $("next").onclick = () => { if (cur < D.sites.length - 1) { cur++; renderSite(); } };
+  $("pair").onclick = () => { pair = !pair; renderSite(); };
+  $("info").onclick = () => { showText = !showText; store.set("kengaku.text", showText ? "1" : "0"); renderSite(); };
+  document.addEventListener("keydown", (e) => {
+    if (!$("view").classList.contains("on") || !viewers[0]) return;
+    if (e.key === "ArrowRight") viewers[0].go(viewers[0].i + 1);
+    if (e.key === "ArrowLeft") viewers[0].go(viewers[0].i - 1);
+  });
+
+  // ================================================================ 電波が無くても見られるように
+  // Service Worker（ページと写真をスマホの中に取り込んでおく仕組み）に、写真を全部入れる
+  async function prepareOffline() {
+    const off = $("off");
+    const files = D.sites.flatMap((s) => s.photos.map((p) => p.file));
+    const say = (cls, html) => { off.className = "offline " + cls; off.innerHTML = html; };
+    if (!("serviceWorker" in navigator) || !("caches" in window)) {
+      say("ng", "このままでは、電波の無い所で写真が出ないかもしれません。<br><b>Safari（iPhone）か Chrome（Android）で開き直してください。</b>");
+      return;
+    }
+    try {
+      const reg = await navigator.serviceWorker.register("sw.js");
+      await navigator.serviceWorker.ready;
+      if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+      const cache = await caches.open("kengaku:" + reg.scope + ":" + D.version);
+      let done = 0, fail = 0;
+      const tick = () => say("", `写真を取り込んでいます… ${done} / ${files.length}<br>
+        <small style="color:var(--sub)">電波のある所で、このまま少し待ってください</small><div class="bar"><i style="width:${Math.round(done / files.length * 100)}%"></i></div>`);
+      tick();
+      const queue = files.slice();
+      const worker = async () => {
+        while (queue.length) {
+          const f = queue.shift();
+          try {
+            if (!(await cache.match(f))) {
+              const r = await fetch(f, { cache: "no-cache" });
+              if (!r.ok) throw new Error(r.status);
+              await cache.put(f, r);
+            }
+          } catch (e) { fail++; }
+          done++; tick();
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+      if (fail) say("ng", `取り込めなかった写真が ${fail}枚あります。<b>電波のある所で、このページを開き直してください。</b>`);
+      else say("ok", `✓ 準備ができました。<b>電波が無くても見られます</b>（写真 ${files.length}枚）`);
+    } catch (e) {
+      say("ng", "取り込みに失敗しました。電波のある所で開き直してください。<br><small>" + esc(e.message || e) + "</small>");
+    }
+  }
+
+  renderList();
+  prepareOffline();
+})();
+</script>
+</body>
+</html>
