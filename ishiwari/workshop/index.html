@@ -313,7 +313,10 @@
   }
 
   // ================================================================ 見る画面
-  let cur = 0, pair = false, viewers = [], showText = store.get("kengaku.text") !== "0";
+  // 見学版は解説者が現場で話すので、解説の欄と［解説］ボタンを出さない。公開版だけ出す（本人 9/29）
+  const withText = D.kind === "公開";
+  if (!withText) { $("info").remove(); $("text").remove(); $("tools").classList.add("nosafe"); }
+  let cur = 0, pair = false, viewers = [], showText = withText && store.get("kengaku.text") !== "0";
 
   function openSite(i) {
     cur = i;
@@ -355,12 +358,14 @@
     $("pair").classList.toggle("on", pair);
     $("prev").disabled = cur === 0;
     $("next").disabled = cur === D.sites.length - 1;
-    const t = $("text");
-    t.innerHTML = `<div class="meta">${esc(s.type)}${s.installed ? "・" + esc(s.installed) + " 施工" : ""}・${esc(s.view)}</div>`
-      + (s.text ? `<p>${esc(s.text)}</p>` : "");
-    t.classList.toggle("hide", !showText);
-    $("info").classList.toggle("on", showText);
-    $("tools").classList.toggle("nosafe", !showText);
+    if (withText) {
+      const t = $("text");
+      t.innerHTML = `<div class="meta">${esc(s.type)}${s.installed ? "・" + esc(s.installed) + " 施工" : ""}・${esc(s.view)}</div>`
+        + (s.text ? `<p>${esc(s.text)}</p>` : "");
+      t.classList.toggle("hide", !showText);
+      $("info").classList.toggle("on", showText);
+      $("tools").classList.toggle("nosafe", !showText);
+    }
     if (!store.get("kengaku.hint")) {
       const h = document.createElement("div"); h.className = "hint";
       h.textContent = "← 横にめくると撮った日が変わります →";
@@ -381,7 +386,7 @@
   $("prev").onclick = () => { if (cur > 0) { cur--; renderSite(); } };
   $("next").onclick = () => { if (cur < D.sites.length - 1) { cur++; renderSite(); } };
   $("pair").onclick = () => { pair = !pair; renderSite(); };
-  $("info").onclick = () => { showText = !showText; store.set("kengaku.text", showText ? "1" : "0"); renderSite(); };
+  if (withText) $("info").onclick = () => { showText = !showText; store.set("kengaku.text", showText ? "1" : "0"); renderSite(); };
   document.addEventListener("keydown", (e) => {
     if (!$("view").classList.contains("on") || !viewers[0]) return;
     if (e.key === "ArrowRight") viewers[0].go(viewers[0].i + 1);
