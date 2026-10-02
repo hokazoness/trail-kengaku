@@ -1,7 +1,7 @@
 // 見学版の Service Worker（ページと写真をスマホの中に取り込んでおき、電波が無くても出す）。
-// scripts/build_kengaku.py が bf5b72fdf8 を写真の中身から作った版に置き換えて書き出す。
+// scripts/build_kengaku.py が f19b47bef4 を写真の中身から作った版に置き換えて書き出す。
 // 版が変われば古い取り込みは消え、新しい写真が入り直る。ここを手で直さない（→ ADR 0052）。
-const VERSION = "bf5b72fdf8";
+const VERSION = "f19b47bef4";
 const CACHE = "kengaku:" + self.registration.scope + ":" + VERSION;
 const SHELL = ["./", "index.html", "data.js", "manifest.webmanifest", "icon.svg"];
 

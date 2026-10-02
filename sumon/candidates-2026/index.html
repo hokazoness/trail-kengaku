@@ -13,8 +13,8 @@ header{padding:14px 16px 6px}h1{font-size:20px;margin:0 0 4px}header p{margin:0;
 #off{margin:0 16px 8px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);font-size:13px;color:var(--sub)}
 #off.ok{color:var(--accent)}#off.ng{color:#b3261e}
 #mapwrap{position:sticky;top:0;z-index:5;background:var(--bg);padding:0 0 6px}
-#map{height:58vh;min-height:300px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-#bar{display:flex;gap:8px;align-items:center;padding:6px 16px 0;font-size:14px}
+#map{height:36vh;height:36dvh;min-height:200px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+#bar{display:flex;gap:8px;align-items:center;padding:6px 16px 0;font-size:13px;line-height:1.35}
 #bar button{border:0;background:var(--accent);color:#fff;border-radius:8px;padding:6px 12px;font-size:14px;white-space:nowrap}
 #nt{flex:1;color:var(--ink)}#nt a{color:var(--accent);font-weight:600}
 #fold{background:none!important;color:var(--sub)!important;border:1px solid var(--line)!important}
@@ -28,13 +28,15 @@ body.folded #map{height:0;min-height:0;border:0}
 .pin .s{display:none}.zl .pin .s{display:inline}.zf .pin{display:none}
 .dot{width:10px;height:10px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 2px rgba(0,0,0,.5)}
 .leaflet-tooltip.lm{font-size:12px;padding:1px 6px}
-section{margin:0 16px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;scroll-margin-top:calc(58vh + 70px)}
+section{margin:0 16px 16px;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;scroll-margin-top:calc(36dvh + 60px)}
 section.hit{outline:3px solid #1f5fd6}
 section h2{margin:0;padding:10px 12px 0;font-size:20px;display:flex;justify-content:space-between;align-items:center}
 section h2 button{font-size:13px;border:1px solid var(--line);background:var(--card);color:var(--accent);border-radius:8px;padding:3px 8px}
 section .meta{padding:0 12px 8px;color:var(--sub);font-size:14px}
 .ph{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:4px}
-.ph figure{margin:0;flex:0 0 100%;scroll-snap-align:start}.ph img{width:100%;display:block}
+.ph figure{margin:0;flex:0 0 100%;scroll-snap-align:start}
+/* 写真は、地図と見出しを除いた残りの高さに収める（本人 10/2: 下の写真がきちんと収まるように） */
+.ph img{width:100%;display:block;max-height:calc(100dvh - 36dvh - 175px);object-fit:contain;background:#000}
 .ph figcaption{padding:4px 12px 10px;color:var(--sub);font-size:13px}
 h3{margin:20px 16px 8px;font-size:16px;color:var(--sub)}
 footer{padding:8px 16px 32px;color:var(--sub);font-size:12px}
@@ -42,7 +44,7 @@ footer{padding:8px 16px 32px;color:var(--sub);font-size:12px}
 <header><h1>守門岳 導流工の候補</h1><p>候補 18 か所（全部ではなく、当日この中から選んで施工します）・使える資材 5 か所</p></header>
 <div id="off">写真と地図の取り込みを準備しています…</div>
 <div id="mapwrap"><div id="map"></div>
-<div id="bar"><button id="go">現在地</button><span id="nt">青い点で現在地と、近い候補を出します（電波は要りません）</span><button id="fold">地図をたたむ</button></div></div>
+<div id="bar"><button id="go">現在地</button><span id="nt">現在地（青い点）と近い候補を出します</span><button id="fold">地図をたたむ</button></div></div>
 <section id="導01"><h2>導01<button data-show="導01">地図で見る</button></h2><div class="meta">保久礼小屋から 1,474m・標高 1219m</div><div class="ph"><figure><img src="photos/61b70177a8.jpg" alt="導01 下流を見る"><figcaption>下流を見る（1/2）</figcaption></figure><figure><img src="photos/d43c715cec.jpg" alt="導01 上流を見る"><figcaption>上流を見る（2/2）</figcaption></figure></div></section>
 <section id="導02"><h2>導02<button data-show="導02">地図で見る</button></h2><div class="meta">保久礼小屋から 1,514m・標高 1234m</div><div class="ph"><figure><img src="photos/e747cfed37.jpg" alt="導02 下流を見る"><figcaption>下流を見る（1/2）</figcaption></figure><figure><img src="photos/b9885d8dc1.jpg" alt="導02 上流を見る"><figcaption>上流を見る（2/2）</figcaption></figure></div></section>
 <section id="導03"><h2>導03<button data-show="導03">地図で見る</button></h2><div class="meta">保久礼小屋から 1,594m・標高 1260m</div><div class="ph"><figure><img src="photos/112bbfcfd8.jpg" alt="導03 下流を見る"><figcaption>下流を見る（1/2）</figcaption></figure><figure><img src="photos/2e960fe268.jpg" alt="導03 上流を見る"><figcaption>上流を見る（2/2）</figcaption></figure></div></section>
