@@ -1,0 +1,16 @@
+{
+ "name": "守門岳 導流工の候補",
+ "short_name": "守門岳 導流工の候補",
+ "start_url": "./",
+ "scope": "./",
+ "display": "standalone",
+ "background_color": "#141816",
+ "theme_color": "#141816",
+ "icons": [
+  {
+   "src": "icon.svg",
+   "sizes": "any",
+   "type": "image/svg+xml"
+  }
+ ]
+}
